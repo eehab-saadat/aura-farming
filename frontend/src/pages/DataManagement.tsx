@@ -19,17 +19,44 @@ const DataManagement: React.FC = () => {
     const fetchData = async () => {
       try {
         const response = await fetch("http://127.0.0.1:5000/data");
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
-        const mappedData: SalesRecord[] = data.map(
-          (item: any, index: number) => ({
+
+        // Validate that we got an array
+        if (!Array.isArray(data)) {
+          throw new Error("API did not return an array of records");
+        }
+
+        const mappedData: SalesRecord[] = data
+          .filter((item: any) => {
+            // Filter out records with invalid date or sales
+            return (
+              item &&
+              item.date &&
+              item.sales !== null &&
+              item.sales !== undefined &&
+              !isNaN(Number(item.sales))
+            );
+          })
+          .map((item: any, index: number) => ({
             id: index.toString(),
             date: item.date,
-            sales: item.sales,
-          })
-        );
+            sales: Number(item.sales), // Ensure sales is a number
+          }))
+          .sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+          ); // Sort by date
+
+        console.log("Fetched data:", mappedData);
+        console.log("Raw API data:", data);
         setRecords(mappedData);
       } catch (error) {
         console.error("Error fetching data:", error);
+        setRecords([]);
       }
     };
     fetchData();

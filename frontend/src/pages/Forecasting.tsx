@@ -7,100 +7,6 @@ const Forecasting: React.FC = () => {
   const [forecastData, setForecastData] = useState<any[]>([]);
   const [isForecasting, setIsForecasting] = useState(false);
 
-  // Test data for API response simulation
-  const testForecastData = [
-    { date: "2018-01-01", demand: 16430 },
-    { date: "2018-01-02", demand: 19240 },
-    { date: "2018-01-03", demand: 19395 },
-    { date: "2018-01-04", demand: 20896 },
-    { date: "2018-01-05", demand: 21967 },
-    { date: "2018-01-06", demand: 23497 },
-    { date: "2018-01-07", demand: 25510 },
-    { date: "2018-01-08", demand: 16512 },
-    { date: "2018-01-09", demand: 19423 },
-    { date: "2018-01-10", demand: 19482 },
-    { date: "2018-01-11", demand: 21026 },
-    { date: "2018-01-12", demand: 22070 },
-    { date: "2018-01-13", demand: 23098 },
-    { date: "2018-01-14", demand: 25336 },
-    { date: "2018-01-15", demand: 16224 },
-    { date: "2018-01-16", demand: 19490 },
-    { date: "2018-01-17", demand: 19401 },
-    { date: "2018-01-18", demand: 21110 },
-    { date: "2018-01-19", demand: 22287 },
-    { date: "2018-01-20", demand: 23249 },
-    { date: "2018-01-21", demand: 24737 },
-    { date: "2018-01-22", demand: 16010 },
-    { date: "2018-01-23", demand: 19020 },
-    { date: "2018-01-24", demand: 19339 },
-    { date: "2018-01-25", demand: 21028 },
-    { date: "2018-01-26", demand: 21969 },
-    { date: "2018-01-27", demand: 22854 },
-    { date: "2018-01-28", demand: 24189 },
-    { date: "2018-01-29", demand: 15768 },
-    { date: "2018-01-30", demand: 18826 },
-    { date: "2018-01-31", demand: 19636 },
-    { date: "2018-02-01", demand: 22732 },
-    { date: "2018-02-02", demand: 24140 },
-    { date: "2018-02-03", demand: 25258 },
-    { date: "2018-02-04", demand: 26284 },
-    { date: "2018-02-05", demand: 17632 },
-    { date: "2018-02-06", demand: 21105 },
-    { date: "2018-02-07", demand: 21526 },
-    { date: "2018-02-08", demand: 23261 },
-    { date: "2018-02-09", demand: 24180 },
-    { date: "2018-02-10", demand: 25551 },
-    { date: "2018-02-11", demand: 27000 },
-    { date: "2018-02-12", demand: 17458 },
-    { date: "2018-02-13", demand: 21107 },
-    { date: "2018-02-14", demand: 21434 },
-    { date: "2018-02-15", demand: 23034 },
-    { date: "2018-02-16", demand: 24163 },
-    { date: "2018-02-17", demand: 25364 },
-    { date: "2018-02-18", demand: 27241 },
-    { date: "2018-02-19", demand: 17279 },
-    { date: "2018-02-20", demand: 21088 },
-    { date: "2018-02-21", demand: 21568 },
-    { date: "2018-02-22", demand: 23196 },
-    { date: "2018-02-23", demand: 24105 },
-    { date: "2018-02-24", demand: 25307 },
-    { date: "2018-02-25", demand: 27076 },
-    { date: "2018-02-26", demand: 17097 },
-    { date: "2018-02-27", demand: 20920 },
-    { date: "2018-02-28", demand: 21425 },
-    { date: "2018-03-01", demand: 27060 },
-    { date: "2018-03-02", demand: 28529 },
-    { date: "2018-03-03", demand: 29603 },
-    { date: "2018-03-04", demand: 31680 },
-    { date: "2018-03-05", demand: 20090 },
-    { date: "2018-03-06", demand: 24925 },
-    { date: "2018-03-07", demand: 25138 },
-    { date: "2018-03-08", demand: 27201 },
-    { date: "2018-03-09", demand: 28305 },
-    { date: "2018-03-10", demand: 29930 },
-    { date: "2018-03-11", demand: 32066 },
-    { date: "2018-03-12", demand: 20806 },
-    { date: "2018-03-13", demand: 24977 },
-    { date: "2018-03-14", demand: 25004 },
-    { date: "2018-03-15", demand: 26958 },
-    { date: "2018-03-16", demand: 28410 },
-    { date: "2018-03-17", demand: 30330 },
-    { date: "2018-03-18", demand: 31916 },
-    { date: "2018-03-19", demand: 20533 },
-    { date: "2018-03-20", demand: 25155 },
-    { date: "2018-03-21", demand: 25167 },
-    { date: "2018-03-22", demand: 26901 },
-    { date: "2018-03-23", demand: 28468 },
-    { date: "2018-03-24", demand: 30606 },
-    { date: "2018-03-25", demand: 32262 },
-    { date: "2018-03-26", demand: 21166 },
-    { date: "2018-03-27", demand: 25196 },
-    { date: "2018-03-28", demand: 25089 },
-    { date: "2018-03-29", demand: 26898 },
-    { date: "2018-03-30", demand: 28746 },
-    { date: "2018-03-31", demand: 31058 },
-  ];
-
   // Generate forecast data in {yyyy,mm,dd,demand} format
   const generateForecastData = (days: number = 90) => {
     const data = [];
@@ -141,28 +47,48 @@ const Forecasting: React.FC = () => {
       // Call the predict-demand API endpoint
       const response = await fetch("http://127.0.0.1:5000/predict-demand", {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const apiData = await response.json();
 
-      // Simulate API call delay (remove this when using real API)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Check if API response is successful
+      if (!apiData.success) {
+        throw new Error(apiData.error || "API request failed");
+      }
 
-      // Use API data when available, fallback to test data for development
-      const rawData = apiData || testForecastData;
+      // Extract forecast data from API response
+      const rawData = apiData.forecast || [];
+
+      // Validate and filter data - ensure date and demand are valid
+      const validData = rawData.filter((item: any) => {
+        return (
+          item &&
+          typeof item.date === "string" &&
+          item.date.trim() !== "" &&
+          typeof item.demand === "number" &&
+          !isNaN(item.demand) &&
+          item.demand >= 0
+        );
+      });
+
+      // Sort by date to ensure proper ordering
+      validData.sort(
+        (a: any, b: any) =>
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
 
       // Take only first 90 items if API returns more
-      const limitedData = rawData.slice(0, 90);
+      const limitedData = validData.slice(0, 90);
 
-      // Transform API data to the required format
-      const transformedData = limitedData.map((item: any) => {
-        return {
-          date: item.date,
-          demand: item.demand,
-        };
-      });
+      // Transform API data to the required format (already in correct format)
+      const transformedData = limitedData.map((item: any) => ({
+        date: item.date,
+        demand: Math.round(item.demand), // Ensure integer values
+      }));
 
       setForecastData(transformedData);
     } catch (error) {

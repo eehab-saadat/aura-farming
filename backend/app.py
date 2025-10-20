@@ -24,15 +24,15 @@ def hello():
     return 'Hello, World!'
 
 
-@app.route('/predict-demand', methods=['POST'])
+@app.route('/predict-demand', methods=['GET'])
 @cross_origin()
 def predict_demand():
     try:
-        data = request.get_json() or {}
-        days = data.get('days', 90)  # Default to 90 days if not specified
+        # Get days parameter from query string, default to 90
+        days = int(request.args.get('days', 90))
 
         csv_path = CSV_PATH
-        forecast = get_demand_forecast(csv_path=csv_path, days=days)
+        forecast = get_demand_forecast(csv_path=csv_path)
 
         return jsonify({
             "success": True,
@@ -51,9 +51,14 @@ def predict_demand():
 def get_data():
     try:
         df = pd.read_csv(CSV_PATH)
-        # Remove store column from response
-        df = df.drop(columns=['store'])
-        return jsonify(df.to_dict(orient='records'))
+        # Select only the columns we need and clean the data
+        df_clean = df[['date', 'sales']].copy()
+        # Ensure date is string and sales is number
+        df_clean['date'] = df_clean['date'].astype(str)
+        df_clean['sales'] = pd.to_numeric(df_clean['sales'], errors='coerce')
+        # Drop any rows with NaN values
+        df_clean = df_clean.dropna()
+        return jsonify(df_clean.to_dict(orient='records'))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -129,7 +134,7 @@ def optimize_inventory():
     2. Runs Monte Carlo simulation to find optimal (R,Q) policy
     3. Analyzes performance with detailed metrics
     4. Returns comprehensive results including costs, service levels, and daily simulation
-    
+
     Request body (optional):
         {
             "horizon": 90,  // forecast horizon in days
@@ -139,7 +144,7 @@ def optimize_inventory():
             "lead_time": 1,  // lead time in days
             "n_simulations": 200  // number of Monte Carlo simulations
         }
-    
+
     Returns:
         {
             "success": true,
@@ -155,24 +160,25 @@ def optimize_inventory():
     try:
         # Get parameters from request or use defaults
         data = request.get_json() if request.is_json else {}
-        
+
         horizon = data.get('horizon', 90)
         h = data.get('holding_cost', 5.0)
         p = data.get('stockout_penalty', 20.0)
         K = data.get('ordering_cost', 200.0)
         L = data.get('lead_time', 1)
         n_sims = data.get('n_simulations', 200)
-        
+
         # Step 1: Generate demand forecast
         print(f"Generating {horizon}-day demand forecast...")
         forecast = get_demand_forecast(csv_path=CSV_PATH, horizon=horizon)
-        
+
         # Convert forecast to DataFrame
         forecast_df = pd.DataFrame(forecast)
         forecast_df['date'] = pd.to_datetime(forecast_df['date'])
-        
+
         # Step 2: Run optimization
-        print(f"Running inventory optimization with h={h}, p={p}, K={K}, L={L}...")
+        print(
+            f"Running inventory optimization with h={h}, p={p}, K={K}, L={L}...")
         optimization_results = run_optimization(
             df_pred=forecast_df,
             h=h,
@@ -182,7 +188,7 @@ def optimize_inventory():
             n_sims=n_sims,
             n_jobs=4
         )
-        
+
         # Step 3: Prepare comprehensive response
         response = {
             "success": True,
@@ -194,17 +200,20 @@ def optimize_inventory():
             "daily_simulation": optimization_results['daily_simulation'],
             "message": f"Optimization completed successfully. Optimal policy: R={optimization_results['optimal_policy']['reorder_point']:.0f}, Q={optimization_results['optimal_policy']['order_quantity']:.0f}"
         }
-        
+
         # Optional: include all tested policies if requested
         if data.get('include_all_policies', False):
             response['all_policies'] = optimization_results['all_policies']
-        
-        print(f"✓ Optimization complete: R={optimization_results['optimal_policy']['reorder_point']:.0f}, Q={optimization_results['optimal_policy']['order_quantity']:.0f}")
-        print(f"  Fill Rate: {optimization_results['performance_metrics']['fill_rate']*100:.1f}%")
-        print(f"  Total Cost: ${optimization_results['cost_summary']['total_cost']:.2f}")
-        
+
+        print(
+            f"✓ Optimization complete: R={optimization_results['optimal_policy']['reorder_point']:.0f}, Q={optimization_results['optimal_policy']['order_quantity']:.0f}")
+        print(
+            f"  Fill Rate: {optimization_results['performance_metrics']['fill_rate']*100:.1f}%")
+        print(
+            f"  Total Cost: ${optimization_results['cost_summary']['total_cost']:.2f}")
+
         return jsonify(response)
-        
+
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
