@@ -8,10 +8,9 @@ interface NavItem {
 }
 
 const navigationItems: NavItem[] = [
-  { name: "Dashboard", route: "/", icon: "D" },
+  { name: "Optimization", route: "/", icon: "O" },
   { name: "Forecasting", route: "/forecasting", icon: "F" },
   { name: "Cost Config", route: "/cost-config", icon: "C" },
-  { name: "Optimization", route: "/optimization", icon: "O" },
   { name: "Data Management", route: "/data-management", icon: "M" },
 ];
 

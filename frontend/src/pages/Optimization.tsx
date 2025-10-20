@@ -1,47 +1,34 @@
-import React, { useState } from "react";
-import OptimizationConfig from "../components/OptimizationConfig";
-import type { OptimizationParams } from "../types/optimization";
-
-const calculateOptimizationScore = (
-  results: Partial<OptimizationResult>
-): number => {
-  // Method 1: Service vs Cost Balance Score
-  // Higher fill rate and lower costs = higher score
-  const serviceScore = results.fill_rate! * 100; // 0-100
-  const costEfficiency = Math.max(0, 100 - results.total_cost! / 1000); // Penalize high costs
-  const inventoryEfficiency = Math.max(0, 100 - results.mean_inventory! / 5); // Penalize high inventory
-
-  // Weighted combination: 50% service, 30% cost efficiency, 20% inventory efficiency
-  const compositeScore =
-    serviceScore * 0.5 + costEfficiency * 0.3 + inventoryEfficiency * 0.2;
-
-  return Math.round(Math.max(0, Math.min(100, compositeScore)));
-};
+import React, { useState, useEffect } from "react";
+import {
+  getCostConfiguration,
+  type CostConfiguration,
+} from "../utils/costStorage";
 
 interface OptimizationResult {
-  policy: [number, number]; // [R, Q] - reorder point and order quantity
+  mean_inventory: number;
+  reorder_point: number;
+  order_quantity: number;
+  total_cost: number;
+  fill_rate: number;
+  stockout_rate: number;
+  num_orders: number;
   total_holding_cost: number;
   total_stockout_cost: number;
   total_ordering_cost: number;
-  total_cost: number;
-  stockout_rate: number;
-  fill_rate: number;
-  num_orders: number;
-  mean_inventory: number;
-  // Additional computed fields for UI
-  costSavings?: number;
-  savingsPercentage?: number;
-  efficiencyScore?: number;
-  forecastPeriod?: number;
+  message: string;
 }
 
 const Optimization: React.FC = () => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [results, setResults] = useState<OptimizationResult | null>(null);
-  const [currentConfig, setCurrentConfig] = useState<OptimizationParams | null>(
-    null
-  );
+  const [costConfig, setCostConfig] = useState<CostConfiguration | null>(null);
+
+  // Load cost configuration on component mount
+  useEffect(() => {
+    const config = getCostConfiguration();
+    setCostConfig(config);
+  }, []);
 
   const optimizationSteps = [
     "Loading forecast data...",
@@ -50,16 +37,11 @@ const Optimization: React.FC = () => {
     "Generating recommendations...",
   ];
 
-  const handleConfigChange = (config: OptimizationParams) => {
-    console.log("Optimization config changed:", config);
-    setCurrentConfig(config);
-    // Reset results when config changes
-    setResults(null);
-  };
-
   const runOptimization = async () => {
-    if (!currentConfig || currentConfig.selectedComponents.length === 0) {
-      alert("Please select at least one component to optimize.");
+    if (!costConfig) {
+      alert(
+        "Please configure cost parameters first in the Cost Configuration page."
+      );
       return;
     }
 
@@ -67,49 +49,99 @@ const Optimization: React.FC = () => {
     setCurrentStep(0);
     setResults(null);
 
-    // Simulate optimization steps
-    for (let i = 0; i < optimizationSteps.length; i++) {
-      setCurrentStep(i);
-      await new Promise((resolve) => setTimeout(resolve, 750));
+    try {
+      // Start progress simulation
+      const progressInterval = setInterval(() => {
+        setCurrentStep((prev) => {
+          if (prev >= 3) {
+            return prev;
+          } else {
+            return prev + 1;
+          }
+        });
+      }, 1000);
+
+      // Call the optimization API with cost parameters
+      const response = await fetch("http://127.0.0.1:5000/optimize-inventory", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          horizon: 90,
+          holding_cost: costConfig.storageCost,
+          stockout_penalty: costConfig.lostSales,
+          ordering_cost: costConfig.expeditedShipping,
+          lead_time: 1,
+          n_simulations: 200,
+        }),
+      });
+
+      console.log(response);
+
+      clearInterval(progressInterval);
+      // setCurrentStep(optimizationSteps.length - 1); // Set to last step
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const apiResult = await response.json();
+
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || "Optimization failed");
+      }
+
+      // Extract data from the API response
+      const optimalPolicy = apiResult.optimal_policy || {};
+      const costSummary = apiResult.cost_summary || {};
+      const performanceMetrics = apiResult.performance_metrics || {};
+
+      setResults({
+        mean_inventory: Math.round(performanceMetrics.mean_inventory || 0),
+        reorder_point: Math.round(optimalPolicy.reorder_point || 0),
+        order_quantity: Math.round(optimalPolicy.order_quantity || 0),
+        total_cost: Math.round(costSummary.total_cost || 0),
+        fill_rate: performanceMetrics.fill_rate || 0,
+        stockout_rate: performanceMetrics.stockout_rate || 0,
+        num_orders: performanceMetrics.num_orders || 0,
+        total_holding_cost: Math.round(costSummary.holding_cost || 0),
+        total_stockout_cost: Math.round(costSummary.stockout_cost || 0),
+        total_ordering_cost: Math.round(costSummary.ordering_cost || 0),
+        message: apiResult.message || "Optimization completed successfully",
+      });
+    } catch (error) {
+      console.error("Optimization failed:", error);
+      alert(
+        `Optimization failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsOptimizing(false);
+      // Keep the progress bar at the final step instead of resetting to 0
+      // setCurrentStep(optimizationSteps.length - 1);
     }
-
-    // Generate mock results based on optimizer output structure
-    const mockResults: OptimizationResult = {
-      policy: [
-        Math.floor(Math.random() * 50) + 20,
-        Math.floor(Math.random() * 100) + 50,
-      ],
-      total_holding_cost: Math.floor(Math.random() * 20000) + 10000,
-      total_stockout_cost: Math.floor(Math.random() * 5000) + 1000,
-      total_ordering_cost: Math.floor(Math.random() * 3000) + 500,
-      total_cost: Math.floor(Math.random() * 50000) + 25000,
-      stockout_rate: Math.random() * 0.1, // 0-10%
-      fill_rate: 0.9 + Math.random() * 0.1, // 90-100%
-      num_orders: Math.floor(Math.random() * 20) + 5,
-      mean_inventory: Math.floor(Math.random() * 200) + 100,
-      // Computed fields for UI
-      costSavings: Math.floor(Math.random() * 15000) + 5000,
-      savingsPercentage: Math.floor(Math.random() * 20) + 10,
-      efficiencyScore: 0, // Will be calculated below
-      forecastPeriod: currentConfig.optimizationHorizon,
-    };
-
-    // Calculate optimization score after mockResults is created
-    mockResults.efficiencyScore = calculateOptimizationScore(mockResults);
-
-    setResults(mockResults);
-    setIsOptimizing(false);
   };
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top Panel - Configuration */}
-      <div className="p-8 bg-gray-50 border-b border-gray-200">
-        <OptimizationConfig onConfigChange={handleConfigChange} />
-      </div>
-
       {/* Bottom Panel - Results (Full Width) */}
       <div className="flex-1 p-8">
+        {/* Cost Configuration Status */}
+        <div className="mb-6 flex justify-center">
+          <div
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              costConfig
+                ? "bg-green-100 text-green-800"
+                : "bg-yellow-100 text-yellow-800"
+            }`}
+          >
+            {costConfig
+              ? "✓ Cost configuration loaded"
+              : "⚠ Please configure costs first"}
+          </div>
+        </div>
         {/* <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Optimization</h1>
           <p className="text-gray-600">Resource optimization and planning tools</p>
@@ -119,15 +151,9 @@ const Optimization: React.FC = () => {
         <div className="mb-8 flex justify-center">
           <button
             onClick={runOptimization}
-            disabled={
-              isOptimizing ||
-              !currentConfig ||
-              currentConfig.selectedComponents.length === 0
-            }
+            disabled={isOptimizing || !costConfig}
             className={`px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-200 ${
-              isOptimizing ||
-              !currentConfig ||
-              currentConfig.selectedComponents.length === 0
+              isOptimizing || !costConfig
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-primary text-white hover:bg-primary/90 shadow-lg hover:shadow-xl"
             }`}
@@ -190,9 +216,100 @@ const Optimization: React.FC = () => {
                 Recommended Stock Level
               </h3>
               <div className="text-6xl font-bold text-primary mb-2">
-                {results.mean_inventory}
+                {results.reorder_point}
               </div>
-              <p className="text-gray-600">units</p>
+              <p className="text-gray-600">units (Reorder Point)</p>
+              {/* <p className="text-sm text-gray-500 mt-2">{results.message}</p> */}
+            </div>
+
+            {/* Optimization Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Policy Details */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  Inventory Policy
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Reorder Point:</span>
+                    <span className="font-semibold">
+                      {results.reorder_point} units
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Order Quantity:</span>
+                    <span className="font-semibold">
+                      {results.order_quantity} units
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Average Inventory:</span>
+                    <span className="font-semibold">
+                      {results.mean_inventory} units
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Metrics */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  Performance Metrics
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Fill Rate:</span>
+                    <span className="font-semibold text-green-600">
+                      {(results.fill_rate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Stockout Rate:</span>
+                    <span className="font-semibold text-red-600">
+                      {(results.stockout_rate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Number of Orders:</span>
+                    <span className="font-semibold">{results.num_orders}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cost Breakdown */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  Cost Breakdown
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Holding Cost:</span>
+                    <span className="font-semibold">
+                      ${results.total_holding_cost.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Stockout Cost:</span>
+                    <span className="font-semibold">
+                      ${results.total_stockout_cost.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ordering Cost:</span>
+                    <span className="font-semibold">
+                      ${results.total_ordering_cost.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="border-t pt-2 mt-3">
+                    <div className="flex justify-between font-bold">
+                      <span className="text-gray-900">Total Cost:</span>
+                      <span className="text-primary">
+                        ${results.total_cost.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

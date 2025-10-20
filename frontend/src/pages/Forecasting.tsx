@@ -222,18 +222,28 @@ const Forecasting: React.FC = () => {
       />
 
       {/* Forecast Chart */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative">
+        {isForecasting && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-xl">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="text-gray-600 font-medium">
+                Generating forecast...
+              </p>
+            </div>
+          </div>
+        )}
         {forecastData.length > 0 ? (
           <ForecastChart
             forecastData={forecastData.slice(0, selectedRange)} // Show only selected range
           />
-        ) : (
+        ) : !isForecasting ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">
               Click "Start Forecasting" to generate forecast data
             </p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

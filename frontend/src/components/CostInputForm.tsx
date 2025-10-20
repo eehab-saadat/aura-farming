@@ -11,6 +11,11 @@ interface CostInputFormData {
   lostSales: number;
   expeditedShipping: number;
   productionDelays: number;
+  // Default API parameters (disabled fields)
+  horizon: number;
+  orderingCost: number;
+  leadTime: number;
+  nSimulations: number;
 }
 
 const CostInputForm: React.FC = () => {
@@ -20,6 +25,11 @@ const CostInputForm: React.FC = () => {
     lostSales: 0,
     expeditedShipping: 0,
     productionDelays: 0,
+    // Default API parameters
+    horizon: 90,
+    orderingCost: 200.0,
+    leadTime: 1,
+    nSimulations: 200,
   });
 
   const [errors, setErrors] = useState<
@@ -30,7 +40,14 @@ const CostInputForm: React.FC = () => {
   useEffect(() => {
     const savedData = getCostConfiguration();
     if (savedData) {
-      setFormData(savedData);
+      setFormData({
+        ...savedData,
+        // Keep default API parameters
+        horizon: 90,
+        orderingCost: 200.0,
+        leadTime: 1,
+        nSimulations: 200,
+      });
     }
   }, []);
 
@@ -80,6 +97,11 @@ const CostInputForm: React.FC = () => {
       lostSales: 0,
       expeditedShipping: 0,
       productionDelays: 0,
+      // Keep default API parameters
+      horizon: 90,
+      orderingCost: 200.0,
+      leadTime: 1,
+      nSimulations: 200,
     });
     setErrors({});
     // Remove from localStorage using utility function
@@ -270,6 +292,77 @@ const CostInputForm: React.FC = () => {
               {errors.productionDelays}
             </p>
           )}
+        </div>
+
+        {/* Default API Parameters Section */}
+        <div className="md:col-span-2 mt-8 pt-6 border-t border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">
+            Default API Parameters
+          </h4>
+          <p className="text-sm text-gray-600 mb-6">
+            These are the default values used by the optimization API. They
+            cannot be modified.
+          </p>
+        </div>
+
+        {/* Horizon */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Forecast Horizon (days)
+          </label>
+          <input
+            type="number"
+            value={formData.horizon}
+            disabled
+            className="w-full px-3 py-2 border rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+          />
+        </div>
+
+        {/* Ordering Cost */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Default Ordering Cost per Order
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="text-gray-400 sm:text-sm">$</span>
+            </div>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.orderingCost}
+              disabled
+              className="pl-7 w-full px-3 py-2 border rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+            />
+          </div>
+        </div>
+
+        {/* Lead Time */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Lead Time (days)
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={formData.leadTime}
+            disabled
+            className="w-full px-3 py-2 border rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+          />
+        </div>
+
+        {/* Number of Simulations */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Number of Simulations
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={formData.nSimulations}
+            disabled
+            className="w-full px-3 py-2 border rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+          />
         </div>
 
         {/* Buttons - Full Width */}

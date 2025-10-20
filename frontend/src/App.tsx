@@ -1,7 +1,6 @@
 import "./index.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
 import Forecasting from "./pages/Forecasting";
 import CostConfig from "./pages/CostConfig";
 import Optimization from "./pages/Optimization";
@@ -12,7 +11,7 @@ function App() {
     <Router>
       <Layout>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Optimization />} />
           <Route path="/forecasting" element={<Forecasting />} />
           <Route path="/cost-config" element={<CostConfig />} />
           <Route path="/optimization" element={<Optimization />} />
