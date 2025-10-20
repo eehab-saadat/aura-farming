@@ -1,61 +1,61 @@
-import React, { useState } from "react";
-import ComponentSelector from "./ComponentSelector";
+import React, { useState, useEffect } from "react";
+import {
+  getCostConfiguration,
+  saveCostConfiguration,
+  clearCostConfiguration,
+} from "../utils/costStorage";
 
 interface CostInputFormData {
-  componentName: string;
-  holdingCost: number;
-  stockoutCost: number;
-  leadTime: number;
-  currentStock: number;
+  storageCost: number;
+  obsolescenceCost: number;
+  lostSales: number;
+  expeditedShipping: number;
+  productionDelays: number;
 }
 
 const CostInputForm: React.FC = () => {
   const [formData, setFormData] = useState<CostInputFormData>({
-    componentName: "",
-    holdingCost: 0,
-    stockoutCost: 0,
-    leadTime: 0,
-    currentStock: 0,
+    storageCost: 0,
+    obsolescenceCost: 0,
+    lostSales: 0,
+    expeditedShipping: 0,
+    productionDelays: 0,
   });
 
   const [errors, setErrors] = useState<
     Partial<Record<keyof CostInputFormData, string>>
   >({});
 
-  const mockComponents = [
-    "Widget A",
-    "Bearing B",
-    "Sensor C",
-    "Motor D",
-    "Valve E",
-    "Pump F",
-    "Controller G",
-    "Switch H",
-    "Cable I",
-    "Connector J",
-  ];
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const savedData = getCostConfiguration();
+    if (savedData) {
+      setFormData(savedData);
+    }
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof CostInputFormData, string>> = {};
 
-    if (!formData.componentName) {
-      newErrors.componentName = "Component name is required";
+    if (formData.storageCost < 0) {
+      newErrors.storageCost = "Storage cost cannot be negative";
     }
 
-    if (formData.holdingCost <= 0) {
-      newErrors.holdingCost = "Holding cost must be greater than 0";
+    if (formData.obsolescenceCost < 0) {
+      newErrors.obsolescenceCost = "Obsolescence cost cannot be negative";
     }
 
-    if (formData.stockoutCost <= 0) {
-      newErrors.stockoutCost = "Stockout cost must be greater than 0";
+    if (formData.lostSales < 0) {
+      newErrors.lostSales = "Lost sales cost cannot be negative";
     }
 
-    if (formData.leadTime <= 0) {
-      newErrors.leadTime = "Lead time must be greater than 0";
+    if (formData.expeditedShipping < 0) {
+      newErrors.expeditedShipping =
+        "Expedited shipping cost cannot be negative";
     }
 
-    if (formData.currentStock < 0) {
-      newErrors.currentStock = "Current stock cannot be negative";
+    if (formData.productionDelays < 0) {
+      newErrors.productionDelays = "Production delays cost cannot be negative";
     }
 
     setErrors(newErrors);
@@ -66,21 +66,24 @@ const CostInputForm: React.FC = () => {
     e.preventDefault();
 
     if (validateForm()) {
-      console.log("Form submitted:", formData);
-      // Here you would typically send the data to an API
+      // Save to localStorage using utility function
+      saveCostConfiguration(formData);
+      console.log("Form submitted and saved:", formData);
       alert("Cost configuration saved successfully!");
     }
   };
 
   const handleClear = () => {
     setFormData({
-      componentName: "",
-      holdingCost: 0,
-      stockoutCost: 0,
-      leadTime: 0,
-      currentStock: 0,
+      storageCost: 0,
+      obsolescenceCost: 0,
+      lostSales: 0,
+      expeditedShipping: 0,
+      productionDelays: 0,
     });
     setErrors({});
+    // Remove from localStorage using utility function
+    clearCostConfiguration();
   };
 
   const handleInputChange = (
@@ -111,27 +114,10 @@ const CostInputForm: React.FC = () => {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
-        {/* Component Name - Full Width */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Component Name
-          </label>
-          <ComponentSelector
-            components={mockComponents}
-            selectedComponent={formData.componentName}
-            onSelect={(component) =>
-              handleInputChange("componentName", component)
-            }
-          />
-          {errors.componentName && (
-            <p className="mt-1 text-sm text-red-600">{errors.componentName}</p>
-          )}
-        </div>
-
-        {/* Holding Cost */}
+        {/* Storage Cost */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Holding Cost per Unit per Day
+            Storage Cost per Unit per Day
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -141,28 +127,28 @@ const CostInputForm: React.FC = () => {
               type="number"
               step="0.01"
               min="0"
-              value={formData.holdingCost || ""}
+              value={formData.storageCost || ""}
               onChange={(e) =>
                 handleInputChange(
-                  "holdingCost",
+                  "storageCost",
                   parseFloat(e.target.value) || 0
                 )
               }
               className={`pl-7 w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-                errors.holdingCost ? "border-red-300" : "border-gray-300"
+                errors.storageCost ? "border-red-300" : "border-gray-300"
               }`}
               placeholder="0.00"
             />
           </div>
-          {errors.holdingCost && (
-            <p className="mt-1 text-sm text-red-600">{errors.holdingCost}</p>
+          {errors.storageCost && (
+            <p className="mt-1 text-sm text-red-600">{errors.storageCost}</p>
           )}
         </div>
 
-        {/* Stockout Cost */}
+        {/* Obsolescence Cost */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Stockout Cost per Unit
+            Obsolescence Cost per Unit
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -172,65 +158,117 @@ const CostInputForm: React.FC = () => {
               type="number"
               step="0.01"
               min="0"
-              value={formData.stockoutCost || ""}
+              value={formData.obsolescenceCost || ""}
               onChange={(e) =>
                 handleInputChange(
-                  "stockoutCost",
+                  "obsolescenceCost",
                   parseFloat(e.target.value) || 0
                 )
               }
               className={`pl-7 w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-                errors.stockoutCost ? "border-red-300" : "border-gray-300"
+                errors.obsolescenceCost ? "border-red-300" : "border-gray-300"
               }`}
               placeholder="0.00"
             />
           </div>
-          {errors.stockoutCost && (
-            <p className="mt-1 text-sm text-red-600">{errors.stockoutCost}</p>
+          {errors.obsolescenceCost && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.obsolescenceCost}
+            </p>
           )}
         </div>
 
-        {/* Lead Time */}
+        {/* Lost Sales */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Lead Time (days)
+            Lost Sales Cost per Unit
           </label>
-          <input
-            type="number"
-            min="1"
-            value={formData.leadTime || ""}
-            onChange={(e) =>
-              handleInputChange("leadTime", parseInt(e.target.value) || 0)
-            }
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-              errors.leadTime ? "border-red-300" : "border-gray-300"
-            }`}
-            placeholder="Enter lead time in days"
-          />
-          {errors.leadTime && (
-            <p className="mt-1 text-sm text-red-600">{errors.leadTime}</p>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">$</span>
+            </div>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.lostSales || ""}
+              onChange={(e) =>
+                handleInputChange("lostSales", parseFloat(e.target.value) || 0)
+              }
+              className={`pl-7 w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                errors.lostSales ? "border-red-300" : "border-gray-300"
+              }`}
+              placeholder="0.00"
+            />
+          </div>
+          {errors.lostSales && (
+            <p className="mt-1 text-sm text-red-600">{errors.lostSales}</p>
           )}
         </div>
 
-        {/* Current Stock Level */}
+        {/* Expedited Shipping */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Stock Level
+            Expedited Shipping Cost per Unit
           </label>
-          <input
-            type="number"
-            min="0"
-            value={formData.currentStock || ""}
-            onChange={(e) =>
-              handleInputChange("currentStock", parseInt(e.target.value) || 0)
-            }
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-              errors.currentStock ? "border-red-300" : "border-gray-300"
-            }`}
-            placeholder="Enter current stock level"
-          />
-          {errors.currentStock && (
-            <p className="mt-1 text-sm text-red-600">{errors.currentStock}</p>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">$</span>
+            </div>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.expeditedShipping || ""}
+              onChange={(e) =>
+                handleInputChange(
+                  "expeditedShipping",
+                  parseFloat(e.target.value) || 0
+                )
+              }
+              className={`pl-7 w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                errors.expeditedShipping ? "border-red-300" : "border-gray-300"
+              }`}
+              placeholder="0.00"
+            />
+          </div>
+          {errors.expeditedShipping && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.expeditedShipping}
+            </p>
+          )}
+        </div>
+
+        {/* Production Delays */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Production Delays Cost per Day
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">$</span>
+            </div>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.productionDelays || ""}
+              onChange={(e) =>
+                handleInputChange(
+                  "productionDelays",
+                  parseFloat(e.target.value) || 0
+                )
+              }
+              className={`pl-7 w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                errors.productionDelays ? "border-red-300" : "border-gray-300"
+              }`}
+              placeholder="0.00"
+            />
+          </div>
+          {errors.productionDelays && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.productionDelays}
+            </p>
           )}
         </div>
 
