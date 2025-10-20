@@ -10,8 +10,8 @@ interface SalesRecord {
 
 const DataManagement: React.FC = () => {
   const [records, setRecords] = useState<SalesRecord[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const tableRef = useRef<HTMLDivElement>(null);
 
   // Fetch data from API
@@ -35,47 +35,21 @@ const DataManagement: React.FC = () => {
     fetchData();
   }, []);
 
-  // Filter records based on search and filters
+  // Filter records based on date range
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
-      // Search filter
-      const matchesSearch =
-        searchTerm === "" || record.date.includes(searchTerm);
-
-      // Store filter - removed, assume single store
-
       // Date range filter
       let matchesDateRange = true;
-      if (dateRangeFilter !== "all") {
+      if (startDate && endDate) {
         const recordDate = new Date(record.date);
-        const today = new Date();
-
-        switch (dateRangeFilter) {
-          case "7days":
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(today.getDate() - 7);
-            matchesDateRange = recordDate >= sevenDaysAgo;
-            break;
-          case "30days":
-            const thirtyDaysAgo = new Date(today);
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-            matchesDateRange = recordDate >= thirtyDaysAgo;
-            break;
-          case "90days":
-            const ninetyDaysAgo = new Date(today);
-            ninetyDaysAgo.setDate(today.getDate() - 90);
-            matchesDateRange = recordDate >= ninetyDaysAgo;
-            break;
-          case "custom":
-            // For custom, we'll implement date picker later
-            matchesDateRange = true;
-            break;
-        }
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        matchesDateRange = recordDate >= start && recordDate <= end;
       }
 
-      return matchesSearch && matchesDateRange;
+      return matchesDateRange;
     });
-  }, [records, searchTerm, dateRangeFilter]);
+  }, [records, startDate, endDate]);
 
   const handleRecordAdded = async (record: SalesRecord) => {
     try {
@@ -181,11 +155,11 @@ const DataManagement: React.FC = () => {
   };
 
   const clearAllFilters = () => {
-    setSearchTerm("");
-    setDateRangeFilter("all");
+    setStartDate("");
+    setEndDate("");
   };
 
-  const hasActiveFilters = searchTerm !== "" || dateRangeFilter !== "all";
+  const hasActiveFilters = startDate !== "" || endDate !== "";
 
   return (
     <div className="p-8">
@@ -198,72 +172,31 @@ const DataManagement: React.FC = () => {
       {/* Quick Add Form */}
       <QuickAddForm onRecordAdded={handleRecordAdded} />
 
-      {/* Search and Filters */}
+      {/* Date Range Filter */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-4">
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg
-                  className="h-5 w-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search by date..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  <svg
-                    className="h-5 w-5 text-gray-400 hover:text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-
           <div className="flex flex-col sm:flex-row gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date Range
+                Start Date
               </label>
-              <select
-                value={dateRangeFilter}
-                onChange={(e) => setDateRangeFilter(e.target.value)}
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-              >
-                <option value="all">All Time</option>
-                <option value="7days">Last 7 days</option>
-                <option value="30days">Last 30 days</option>
-                <option value="90days">Last 90 days</option>
-                <option value="custom">Custom Range</option>
-              </select>
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
             </div>
 
             {hasActiveFilters && (

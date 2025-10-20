@@ -138,23 +138,20 @@ const Forecasting: React.FC = () => {
     setIsForecasting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/forecast', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     // Add any required parameters for the forecast API
-      //   }),
-      // });
-      // const apiData = await response.json();
+      // Call the predict-demand API endpoint
+      const response = await fetch("http://127.0.0.1:5000/predict-demand", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const apiData = await response.json();
 
-      // Simulate API call delay
+      // Simulate API call delay (remove this when using real API)
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Use test data for now (replace with apiData when API is ready)
-      const rawData = testForecastData; // apiData when using real API
+      // Use API data when available, fallback to test data for development
+      const rawData = apiData || testForecastData;
 
       // Take only first 90 items if API returns more
       const limitedData = rawData.slice(0, 90);

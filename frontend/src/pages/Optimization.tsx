@@ -1,9 +1,5 @@
 import React, { useState } from "react";
 import OptimizationConfig from "../components/OptimizationConfig";
-import OptimalStockCard from "../components/OptimalStockCard";
-import InventorySimulationChart from "../components/InventorySimulationChart";
-import CostComparisonChart from "../components/CostComparisonChart";
-import SensitivityPanel from "../components/SensitivityPanel";
 import type { OptimizationParams } from "../types/optimization";
 
 const calculateOptimizationScore = (
@@ -188,123 +184,28 @@ const Optimization: React.FC = () => {
         {/* Results Section */}
         {results && !isOptimizing && (
           <div className="space-y-8">
-            {/* Optimal Stock Card - Hero Display */}
-            <OptimalStockCard
-              optimalStock={results.mean_inventory}
-              reorderPoint={results.policy[0]}
-              orderQuantity={results.policy[1]}
-              costSavings={results.costSavings || 0}
-              savingsPercentage={results.savingsPercentage || 0}
-              efficiencyScore={results.efficiencyScore || 0}
-              forecastPeriod={results.forecastPeriod || 90}
-            />
-
-            {/* Inventory Simulation Chart */}
-            <InventorySimulationChart
-              reorderPoint={results.policy[0]}
-              safetyStock={Math.floor(results.mean_inventory * 0.5)}
-              days={results.forecastPeriod || 90}
-            />
-
-            {/* Cost Comparison Chart */}
-            <CostComparisonChart />
-
-            {/* Sensitivity Analysis Panel */}
-            <SensitivityPanel
-              baseOptimalStock={results.mean_inventory}
-              baseReorderPoint={results.policy[0]}
-            />
-
-            {/* Detailed Results */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                Detailed Optimization Results
+            {/* Stock Number Display */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Recommended Stock Level
               </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Key Metrics */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">
-                      Total Cost
-                    </span>
-                    <span className="text-lg font-bold text-green-600">
-                      ${results.total_cost.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">
-                      Fill Rate
-                    </span>
-                    <span className="text-lg font-bold text-blue-600">
-                      {(results.fill_rate * 100).toFixed(1)}%
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">
-                      Stockout Rate
-                    </span>
-                    <span className="text-lg font-bold text-purple-600">
-                      {(results.stockout_rate * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cost Breakdown */}
-                <div>
-                  <h4 className="text-md font-semibold text-gray-900 mb-4">
-                    Cost Breakdown
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">
-                        Holding Cost
-                      </span>
-                      <span className="text-sm font-bold text-gray-900">
-                        ${results.total_holding_cost.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">
-                        Stockout Cost
-                      </span>
-                      <span className="text-sm font-bold text-gray-900">
-                        ${results.total_stockout_cost.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">
-                        Ordering Cost
-                      </span>
-                      <span className="text-sm font-bold text-gray-900">
-                        ${results.total_ordering_cost.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              <div className="text-6xl font-bold text-primary mb-2">
+                {results.mean_inventory}
               </div>
-
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-sm text-gray-600">
-                  Optimization completed successfully. These recommendations are
-                  based on your configured parameters and historical data.
-                </p>
-              </div>
+              <p className="text-gray-600">units</p>
             </div>
           </div>
         )}
 
         {/* Initial State */}
         {!results && !isOptimizing && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Optimization Results
+              Stock Optimization
             </h3>
             <p className="text-gray-600">
-              Configure your optimization parameters in the left panel and click
-              "Run Optimization" to see results here.
+              Configure your optimization parameters and click "Run
+              Optimization" to get the recommended stock level.
             </p>
           </div>
         )}

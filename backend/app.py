@@ -9,6 +9,7 @@ CORS(app)
 
 CSV_PATH = "data/daily_sales.csv"
 
+
 @app.route('/ping', methods=['GET'])
 @cross_origin()
 def ping():
@@ -19,12 +20,17 @@ def ping():
 def hello():
     return 'Hello, World!'
 
-@app.route('/predict-demand', methods=['GET'])
+
+@app.route('/predict-demand', methods=['POST'])
 @cross_origin()
 def predict_demand():
     try:
+        data = request.get_json() or {}
+        days = data.get('days', 90)  # Default to 90 days if not specified
+
         csv_path = CSV_PATH
-        forecast = get_demand_forecast(csv_path=csv_path)
+        forecast = get_demand_forecast(csv_path=csv_path, days=days)
+
         return jsonify({
             "success": True,
             "forecast": forecast,
@@ -35,6 +41,7 @@ def predict_demand():
             "success": False,
             "error": str(e)
         }), 500
+
 
 @app.route('/data', methods=['GET'])
 @cross_origin()
