@@ -3,7 +3,6 @@ import React, { useState, useMemo } from "react";
 interface DemandRecord {
   id: string;
   date: string;
-  store: string;
   demand: number;
 }
 
@@ -13,8 +12,8 @@ interface DataTableProps {
     id: string,
     field: keyof DemandRecord,
     value: string | number
-  ) => void;
-  onDeleteRecord: (id: string) => void;
+  ) => Promise<void>;
+  onDeleteRecord: (id: string) => Promise<void>;
 }
 
 type SortField = keyof DemandRecord;
@@ -40,14 +39,6 @@ const DataTable: React.FC<DataTableProps> = ({
   const mockRecords: DemandRecord[] = useMemo(() => {
     if (records.length > 0) return records;
 
-    const stores = [
-      "Downtown Store",
-      "Mall Location",
-      "Suburban Branch",
-      "Airport Outlet",
-      "Online Warehouse",
-    ];
-
     const mockData: DemandRecord[] = [];
     const today = new Date();
 
@@ -58,7 +49,6 @@ const DataTable: React.FC<DataTableProps> = ({
       mockData.push({
         id: `mock-${i}`,
         date: date.toISOString().split("T")[0],
-        store: stores[Math.floor(Math.random() * stores.length)],
         demand: Math.floor(Math.random() * 200) + 10,
       });
     }
@@ -116,12 +106,12 @@ const DataTable: React.FC<DataTableProps> = ({
     }
   };
 
-  const handleCellSave = () => {
+  const handleCellSave = async () => {
     if (editingCell) {
       const value =
         editingCell.field === "demand" ? parseFloat(editValue) : editValue;
       if (value !== undefined && !isNaN(value as number)) {
-        onUpdateRecord(editingCell.id, editingCell.field, value);
+        await onUpdateRecord(editingCell.id, editingCell.field, value);
       }
     }
     setEditingCell(null);
@@ -173,13 +163,6 @@ const DataTable: React.FC<DataTableProps> = ({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("store")}
-              >
-                Store
-                <SortIcon field="store" />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort("demand")}
               >
                 Demand
@@ -210,30 +193,6 @@ const DataTable: React.FC<DataTableProps> = ({
                     />
                   ) : (
                     new Date(record.date).toLocaleDateString()
-                  )}
-                </td>
-                <td
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 cursor-pointer"
-                  onDoubleClick={() => handleCellDoubleClick(record, "store")}
-                >
-                  {editingCell?.id === record.id &&
-                  editingCell.field === "store" ? (
-                    <select
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={handleCellEdit}
-                      onBlur={handleCellSave}
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                      autoFocus
-                    >
-                      <option value="Downtown Store">Downtown Store</option>
-                      <option value="Mall Location">Mall Location</option>
-                      <option value="Suburban Branch">Suburban Branch</option>
-                      <option value="Airport Outlet">Airport Outlet</option>
-                      <option value="Online Warehouse">Online Warehouse</option>
-                    </select>
-                  ) : (
-                    record.store
                   )}
                 </td>
                 <td
@@ -279,7 +238,7 @@ const DataTable: React.FC<DataTableProps> = ({
                       </svg>
                     </button>
                     <button
-                      onClick={() => onDeleteRecord(record.id)}
+                      onClick={async () => await onDeleteRecord(record.id)}
                       className="text-red-600 hover:text-red-800 p-1"
                       title="Delete"
                     >

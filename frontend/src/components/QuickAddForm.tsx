@@ -3,18 +3,16 @@ import React, { useState } from "react";
 interface DemandRecord {
   id: string;
   date: string;
-  store: string;
   demand: number;
 }
 
 interface QuickAddFormProps {
-  onRecordAdded: (record: DemandRecord) => void;
+  onRecordAdded: (record: DemandRecord) => Promise<void>;
 }
 
 const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0], // Today's date in YYYY-MM-DD format
-    store: "",
     demand: "",
   });
 
@@ -22,23 +20,11 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const mockStores = [
-    "Downtown Store",
-    "Mall Location",
-    "Suburban Branch",
-    "Airport Outlet",
-    "Online Warehouse",
-  ];
-
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.date) {
       newErrors.date = "Date is required";
-    }
-
-    if (!formData.store) {
-      newErrors.store = "Store selection is required";
     }
 
     if (!formData.demand || parseFloat(formData.demand) <= 0) {
@@ -64,16 +50,14 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
     const newRecord: DemandRecord = {
       id: Date.now().toString(),
       date: formData.date,
-      store: formData.store,
       demand: parseFloat(formData.demand),
     };
 
-    onRecordAdded(newRecord);
+    await onRecordAdded(newRecord);
 
     // Clear form
     setFormData({
       date: new Date().toISOString().split("T")[0],
-      store: "",
       demand: "",
     });
 
@@ -93,7 +77,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
     setErrors({});
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -154,30 +138,6 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
           />
           {errors.date && (
             <p className="mt-1 text-sm text-red-600">{errors.date}</p>
-          )}
-        </div>
-
-        {/* Store Dropdown */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Store
-          </label>
-          <select
-            value={formData.store}
-            onChange={(e) => handleInputChange("store", e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-              errors.store ? "border-red-300" : "border-gray-300"
-            }`}
-          >
-            <option value="">Select a store...</option>
-            {mockStores.map((store) => (
-              <option key={store} value={store}>
-                {store}
-              </option>
-            ))}
-          </select>
-          {errors.store && (
-            <p className="mt-1 text-sm text-red-600">{errors.store}</p>
           )}
         </div>
 
