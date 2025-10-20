@@ -7,7 +7,7 @@ import pandas as pd
 app = Flask(__name__)
 CORS(app)
 
-CSV_DATA_PATH = "data/daily_sales.csv"
+CSV_PATH = "data/daily_sales.csv"
 
 @app.route('/ping', methods=['GET'])
 @cross_origin()
@@ -23,7 +23,7 @@ def hello():
 @cross_origin()
 def predict_demand():
     try:
-        csv_path = CSV_DATA_PATH
+        csv_path = CSV_PATH
         forecast = get_demand_forecast(csv_path=csv_path)
         return jsonify({
             "success": True,

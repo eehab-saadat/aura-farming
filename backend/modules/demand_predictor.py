@@ -3,6 +3,7 @@ import numpy as np
 import lightgbm as lgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import TimeSeriesSplit
+from typing import List, Tuple, Dict, Any
 
 TARGET = "sales"
 DATE_COL = "date"
@@ -11,7 +12,7 @@ SEED = 42
 LAGS = [1, 7, 14, 28, 56, 91, 182, 365]
 ROLLS = [7, 14, 28, 56]
 
-def create_date_features(df):
+def create_date_features(df: pd.DataFrame) -> pd.DataFrame:
     """Generate date-related features capturing seasonality and holidays."""
     df["dow"] = df[DATE_COL].dt.weekday
     df["week"] = df[DATE_COL].dt.isocalendar().week.astype(int)
@@ -25,7 +26,7 @@ def create_date_features(df):
     df["cos_day"] = np.cos(2 * np.pi * df["dayofyear"] / 365)
     return df
 
-def add_lags_rolls(df, lags, rolls):
+def add_lags_rolls(df: pd.DataFrame, lags: List[int], rolls: List[int]) -> pd.DataFrame:
     """Add lag and rolling window features."""
     df = df.copy()
     for lag in lags:
@@ -35,7 +36,7 @@ def add_lags_rolls(df, lags, rolls):
         df[f"roll_std_{r}"] = df[TARGET].shift(1).rolling(r).std()
     return df
 
-def load_and_prepare_data(csv_path):
+def load_and_prepare_data(csv_path: str) -> Tuple[pd.DataFrame, List[str]]:
     """Load and prepare data for training."""
     df = pd.read_csv(csv_path)
     df[DATE_COL] = pd.to_datetime(df[DATE_COL])
@@ -54,7 +55,7 @@ def load_and_prepare_data(csv_path):
     
     return df, lag_cols
 
-def train_model(df, lag_cols):
+def train_model(df: pd.DataFrame, lag_cols: List[str]) -> Tuple[lgb.Booster, List[str]]:
     """Train the LightGBM model."""
     FEATURES = [
         "dow", "week", "month", "day", "quarter", "is_weekend", "year",
@@ -98,7 +99,12 @@ def train_model(df, lag_cols):
     
     return bst, FEATURES
 
-def recursive_forecast(model, df_recent, features, horizon=90):
+def recursive_forecast(
+    model: lgb.Booster,
+    df_recent: pd.DataFrame,
+    features: List[str],
+    horizon: int = 90,
+) -> pd.DataFrame:
     """Generate recursive forecasts for the specified horizon."""
     preds, history = [], list(df_recent[TARGET])
     current_date = df_recent[DATE_COL].iloc[-1]
@@ -133,7 +139,7 @@ def recursive_forecast(model, df_recent, features, horizon=90):
 
     return pd.DataFrame(preds)
 
-def get_demand_forecast(csv_path, horizon=90):
+def get_demand_forecast(csv_path: str, horizon: int = 90) -> List[Dict[str, Any]]:
     """
     Main function to generate demand forecast.
     
