@@ -17,9 +17,7 @@ interface ForecastChartProps {
   }[];
 }
 
-const ForecastChart: React.FC<ForecastChartProps> = ({
-  forecastData,
-}) => {
+const ForecastChart: React.FC<ForecastChartProps> = ({ forecastData }) => {
   // Use only forecast data for the chart
   const chartData = forecastData;
 
