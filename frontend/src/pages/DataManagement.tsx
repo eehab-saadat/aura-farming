@@ -1,63 +1,48 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import QuickAddForm from "../components/QuickAddForm";
 import DataTable from "../components/DataTable";
 
-interface DemandRecord {
+interface SalesRecord {
   id: string;
   date: string;
-  store: string;
-  demand: number;
+  sales: number;
 }
 
 const DataManagement: React.FC = () => {
-  const [records, setRecords] = useState<DemandRecord[]>([]);
+  const [records, setRecords] = useState<SalesRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [storeFilter, setStoreFilter] = useState<string>("all");
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const mockStores = [
-    "Downtown Store",
-    "Mall Location",
-    "Suburban Branch",
-    "Airport Outlet",
-    "Online Warehouse",
-  ];
-
-  // Generate mock data if no records exist
-  const allRecords = useMemo(() => {
-    if (records.length > 0) return records;
-
-    const mockData: DemandRecord[] = [];
-    const today = new Date();
-
-    for (let i = 0; i < 50; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - Math.floor(Math.random() * 365));
-
-      mockData.push({
-        id: `mock-${i}`,
-        date: date.toISOString().split("T")[0],
-        store: mockStores[Math.floor(Math.random() * mockStores.length)],
-        demand: Math.floor(Math.random() * 200) + 10,
-      });
-    }
-
-    return mockData;
-  }, [records]);
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/data");
+        const data = await response.json();
+        const mappedData: SalesRecord[] = data.map(
+          (item: any, index: number) => ({
+            id: index.toString(),
+            date: item.date,
+            sales: item.sales,
+          })
+        );
+        setRecords(mappedData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Filter records based on search and filters
   const filteredRecords = useMemo(() => {
-    return allRecords.filter((record) => {
+    return records.filter((record) => {
       // Search filter
       const matchesSearch =
-        searchTerm === "" ||
-        record.store.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.date.includes(searchTerm);
+        searchTerm === "" || record.date.includes(searchTerm);
 
-      // Store filter
-      const matchesStore =
-        storeFilter === "all" || record.store === storeFilter;
+      // Store filter - removed, assume single store
 
       // Date range filter
       let matchesDateRange = true;
@@ -88,12 +73,46 @@ const DataManagement: React.FC = () => {
         }
       }
 
-      return matchesSearch && matchesStore && matchesDateRange;
+      return matchesSearch && matchesDateRange;
     });
-  }, [allRecords, searchTerm, storeFilter, dateRangeFilter]);
+  }, [records, searchTerm, dateRangeFilter]);
 
-  const handleRecordAdded = (record: DemandRecord) => {
-    setRecords((prev) => [record, ...prev]);
+  const handleRecordAdded = async (record: SalesRecord) => {
+    try {
+      // Map to API format
+      const apiRecord = {
+        date: record.date,
+        store: 1, // assume single store
+        sales: record.sales,
+        dow: 1, // default
+        week: 1,
+        month: 1,
+        day: 1,
+        quarter: 1,
+        is_weekend: 0,
+        year: 2023,
+      };
+      const response = await fetch("http://127.0.0.1:5000/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([apiRecord]),
+      });
+      if (response.ok) {
+        // Refetch data
+        const fetchResponse = await fetch("http://127.0.0.1:5000/data");
+        const data = await fetchResponse.json();
+        const mappedData: SalesRecord[] = data.map(
+          (item: any, index: number) => ({
+            id: index.toString(),
+            date: item.date,
+            sales: item.sales,
+          })
+        );
+        setRecords(mappedData);
+      }
+    } catch (error) {
+      console.error("Error adding record:", error);
+    }
 
     // Scroll to the table after adding a record
     setTimeout(() => {
@@ -104,32 +123,69 @@ const DataManagement: React.FC = () => {
     }, 100);
   };
 
-  const handleUpdateRecord = (
+  const handleUpdateRecord = async (
     id: string,
-    field: keyof DemandRecord,
+    field: keyof SalesRecord,
     value: string | number
   ) => {
-    setRecords((prev) =>
-      prev.map((record) =>
-        record.id === id ? { ...record, [field]: value } : record
-      )
-    );
+    try {
+      const index = parseInt(id);
+      const updateData: any = {};
+      if (field === "sales") {
+        updateData.sales = value;
+      } else if (field === "date") {
+        updateData.date = value;
+      }
+      const response = await fetch(`http://127.0.0.1:5000/data/${index}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+      if (response.ok) {
+        // Update local state
+        setRecords((prev) =>
+          prev.map((record) =>
+            record.id === id ? { ...record, [field]: value } : record
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error updating record:", error);
+    }
   };
 
-  const handleDeleteRecord = (id: string) => {
+  const handleDeleteRecord = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this record?")) {
-      setRecords((prev) => prev.filter((record) => record.id !== id));
+      try {
+        const index = parseInt(id);
+        const response = await fetch(`http://127.0.0.1:5000/data/${index}`, {
+          method: "DELETE",
+        });
+        if (response.ok) {
+          // Refetch data to update indices
+          const fetchResponse = await fetch("http://127.0.0.1:5000/data");
+          const data = await fetchResponse.json();
+          const mappedData: SalesRecord[] = data.map(
+            (item: any, index: number) => ({
+              id: index.toString(),
+              date: item.date,
+              sales: item.sales,
+            })
+          );
+          setRecords(mappedData);
+        }
+      } catch (error) {
+        console.error("Error deleting record:", error);
+      }
     }
   };
 
   const clearAllFilters = () => {
     setSearchTerm("");
-    setStoreFilter("all");
     setDateRangeFilter("all");
   };
 
-  const hasActiveFilters =
-    searchTerm !== "" || storeFilter !== "all" || dateRangeFilter !== "all";
+  const hasActiveFilters = searchTerm !== "" || dateRangeFilter !== "all";
 
   return (
     <div className="p-8">
@@ -137,7 +193,6 @@ const DataManagement: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           Data Management
         </h1>
-        <p className="text-gray-600">Import, export, and manage farming data</p>
       </div>
 
       {/* Quick Add Form */}
@@ -165,7 +220,7 @@ const DataManagement: React.FC = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search by store or date..."
+                placeholder="Search by date..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary"
@@ -194,24 +249,6 @@ const DataManagement: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Store
-              </label>
-              <select
-                value={storeFilter}
-                onChange={(e) => setStoreFilter(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-              >
-                <option value="all">All Stores</option>
-                {mockStores.map((store) => (
-                  <option key={store} value={store}>
-                    {store}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Date Range
@@ -243,7 +280,7 @@ const DataManagement: React.FC = () => {
         </div>
 
         <div className="text-sm text-gray-600">
-          Showing {filteredRecords.length} of {allRecords.length} records
+          Showing {filteredRecords.length} of {records.length} records
         </div>
       </div>
 

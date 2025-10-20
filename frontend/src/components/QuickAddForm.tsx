@@ -1,34 +1,24 @@
 import React, { useState } from "react";
 
-interface DemandRecord {
+interface SalesRecord {
   id: string;
   date: string;
-  store: string;
-  demand: number;
+  sales: number;
 }
 
 interface QuickAddFormProps {
-  onRecordAdded: (record: DemandRecord) => void;
+  onRecordAdded: (record: SalesRecord) => Promise<void>;
 }
 
 const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0], // Today's date in YYYY-MM-DD format
-    store: "",
-    demand: "",
+    sales: "",
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-
-  const mockStores = [
-    "Downtown Store",
-    "Mall Location",
-    "Suburban Branch",
-    "Airport Outlet",
-    "Online Warehouse",
-  ];
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -37,12 +27,8 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
       newErrors.date = "Date is required";
     }
 
-    if (!formData.store) {
-      newErrors.store = "Store selection is required";
-    }
-
-    if (!formData.demand || parseFloat(formData.demand) <= 0) {
-      newErrors.demand = "Demand must be greater than 0";
+    if (!formData.sales || parseFloat(formData.sales) <= 0) {
+      newErrors.sales = "Sales must be greater than 0";
     }
 
     setErrors(newErrors);
@@ -61,20 +47,18 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const newRecord: DemandRecord = {
+    const newRecord: SalesRecord = {
       id: Date.now().toString(),
       date: formData.date,
-      store: formData.store,
-      demand: parseFloat(formData.demand),
+      sales: parseFloat(formData.sales),
     };
 
-    onRecordAdded(newRecord);
+    await onRecordAdded(newRecord);
 
     // Clear form
     setFormData({
       date: new Date().toISOString().split("T")[0],
-      store: "",
-      demand: "",
+      sales: "",
     });
 
     setIsSubmitting(false);
@@ -93,7 +77,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
     setErrors({});
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -114,9 +98,9 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
-            Quick Add Demand Record
+            Quick Add Sales Record
           </h3>
-          <p className="text-gray-600 text-sm">Add new demand data quickly</p>
+          <p className="text-gray-600 text-sm">Add new sales data quickly</p>
         </div>
 
         {showSuccess && (
@@ -157,53 +141,29 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onRecordAdded }) => {
           )}
         </div>
 
-        {/* Store Dropdown */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Store
-          </label>
-          <select
-            value={formData.store}
-            onChange={(e) => handleInputChange("store", e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-              errors.store ? "border-red-300" : "border-gray-300"
-            }`}
-          >
-            <option value="">Select a store...</option>
-            {mockStores.map((store) => (
-              <option key={store} value={store}>
-                {store}
-              </option>
-            ))}
-          </select>
-          {errors.store && (
-            <p className="mt-1 text-sm text-red-600">{errors.store}</p>
-          )}
-        </div>
-
         {/* Demand Input */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Demand
+            Sales
           </label>
           <div className="relative">
             <input
               type="number"
               min="0"
               step="0.1"
-              value={formData.demand}
-              onChange={(e) => handleInputChange("demand", e.target.value)}
-              placeholder="Enter demand..."
+              value={formData.sales}
+              onChange={(e) => handleInputChange("sales", e.target.value)}
+              placeholder="Enter sales..."
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-                errors.demand ? "border-red-300" : "border-gray-300"
+                errors.sales ? "border-red-300" : "border-gray-300"
               }`}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <span className="text-gray-500 text-sm">units</span>
             </div>
           </div>
-          {errors.demand && (
-            <p className="mt-1 text-sm text-red-600">{errors.demand}</p>
+          {errors.sales && (
+            <p className="mt-1 text-sm text-red-600">{errors.sales}</p>
           )}
         </div>
 

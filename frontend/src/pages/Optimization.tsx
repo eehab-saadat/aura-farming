@@ -6,17 +6,37 @@ import CostComparisonChart from "../components/CostComparisonChart";
 import SensitivityPanel from "../components/SensitivityPanel";
 import type { OptimizationParams } from "../types/optimization";
 
+const calculateOptimizationScore = (
+  results: Partial<OptimizationResult>
+): number => {
+  // Method 1: Service vs Cost Balance Score
+  // Higher fill rate and lower costs = higher score
+  const serviceScore = results.fill_rate! * 100; // 0-100
+  const costEfficiency = Math.max(0, 100 - results.total_cost! / 1000); // Penalize high costs
+  const inventoryEfficiency = Math.max(0, 100 - results.mean_inventory! / 5); // Penalize high inventory
+
+  // Weighted combination: 50% service, 30% cost efficiency, 20% inventory efficiency
+  const compositeScore =
+    serviceScore * 0.5 + costEfficiency * 0.3 + inventoryEfficiency * 0.2;
+
+  return Math.round(Math.max(0, Math.min(100, compositeScore)));
+};
+
 interface OptimizationResult {
-  totalCost: number;
-  recommendedStock: { [component: string]: number };
-  costSavings: number;
-  riskReduction: number;
-  optimalStockLevel: number;
-  reorderPoint: number;
-  orderQuantity: number;
-  savingsPercentage: number;
-  efficiencyScore: number;
-  forecastPeriod: number;
+  policy: [number, number]; // [R, Q] - reorder point and order quantity
+  total_holding_cost: number;
+  total_stockout_cost: number;
+  total_ordering_cost: number;
+  total_cost: number;
+  stockout_rate: number;
+  fill_rate: number;
+  num_orders: number;
+  mean_inventory: number;
+  // Additional computed fields for UI
+  costSavings?: number;
+  savingsPercentage?: number;
+  efficiencyScore?: number;
+  forecastPeriod?: number;
 }
 
 const Optimization: React.FC = () => {
@@ -57,32 +77,29 @@ const Optimization: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 750));
     }
 
-    // Generate mock results
-    const totalRecommendedStock = Object.values(
-      currentConfig.selectedComponents.reduce((acc, component) => {
-        acc[component] = Math.floor(Math.random() * 100) + 20;
-        return acc;
-      }, {} as { [component: string]: number })
-    ).reduce((sum, stock) => sum + stock, 0);
-
+    // Generate mock results based on optimizer output structure
     const mockResults: OptimizationResult = {
-      totalCost: Math.floor(Math.random() * 50000) + 25000,
-      recommendedStock: currentConfig.selectedComponents.reduce(
-        (acc, component) => {
-          acc[component] = Math.floor(Math.random() * 100) + 20;
-          return acc;
-        },
-        {} as { [component: string]: number }
-      ),
+      policy: [
+        Math.floor(Math.random() * 50) + 20,
+        Math.floor(Math.random() * 100) + 50,
+      ],
+      total_holding_cost: Math.floor(Math.random() * 20000) + 10000,
+      total_stockout_cost: Math.floor(Math.random() * 5000) + 1000,
+      total_ordering_cost: Math.floor(Math.random() * 3000) + 500,
+      total_cost: Math.floor(Math.random() * 50000) + 25000,
+      stockout_rate: Math.random() * 0.1, // 0-10%
+      fill_rate: 0.9 + Math.random() * 0.1, // 90-100%
+      num_orders: Math.floor(Math.random() * 20) + 5,
+      mean_inventory: Math.floor(Math.random() * 200) + 100,
+      // Computed fields for UI
       costSavings: Math.floor(Math.random() * 15000) + 5000,
-      riskReduction: Math.floor(Math.random() * 40) + 10,
-      optimalStockLevel: totalRecommendedStock,
-      reorderPoint: Math.floor(totalRecommendedStock * 0.6),
-      orderQuantity: Math.floor(totalRecommendedStock * 0.4),
       savingsPercentage: Math.floor(Math.random() * 20) + 10,
-      efficiencyScore: Math.floor(Math.random() * 30) + 70,
+      efficiencyScore: 0, // Will be calculated below
       forecastPeriod: currentConfig.optimizationHorizon,
     };
+
+    // Calculate optimization score after mockResults is created
+    mockResults.efficiencyScore = calculateOptimizationScore(mockResults);
 
     setResults(mockResults);
     setIsOptimizing(false);
@@ -173,20 +190,20 @@ const Optimization: React.FC = () => {
           <div className="space-y-8">
             {/* Optimal Stock Card - Hero Display */}
             <OptimalStockCard
-              optimalStock={results.optimalStockLevel}
-              reorderPoint={results.reorderPoint}
-              orderQuantity={results.orderQuantity}
-              costSavings={results.costSavings}
-              savingsPercentage={results.savingsPercentage}
-              efficiencyScore={results.efficiencyScore}
-              forecastPeriod={results.forecastPeriod}
+              optimalStock={results.mean_inventory}
+              reorderPoint={results.policy[0]}
+              orderQuantity={results.policy[1]}
+              costSavings={results.costSavings || 0}
+              savingsPercentage={results.savingsPercentage || 0}
+              efficiencyScore={results.efficiencyScore || 0}
+              forecastPeriod={results.forecastPeriod || 90}
             />
 
             {/* Inventory Simulation Chart */}
             <InventorySimulationChart
-              reorderPoint={results.reorderPoint}
-              safetyStock={Math.floor(results.optimalStockLevel * 0.5)}
-              days={results.forecastPeriod}
+              reorderPoint={results.policy[0]}
+              safetyStock={Math.floor(results.mean_inventory * 0.5)}
+              days={results.forecastPeriod || 90}
             />
 
             {/* Cost Comparison Chart */}
@@ -194,8 +211,8 @@ const Optimization: React.FC = () => {
 
             {/* Sensitivity Analysis Panel */}
             <SensitivityPanel
-              baseOptimalStock={results.optimalStockLevel}
-              baseReorderPoint={results.reorderPoint}
+              baseOptimalStock={results.mean_inventory}
+              baseReorderPoint={results.policy[0]}
             />
 
             {/* Detailed Results */}
@@ -212,50 +229,59 @@ const Optimization: React.FC = () => {
                       Total Cost
                     </span>
                     <span className="text-lg font-bold text-green-600">
-                      ${results.totalCost.toLocaleString()}
+                      ${results.total_cost.toLocaleString()}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                     <span className="text-sm font-medium text-gray-700">
-                      Cost Savings
+                      Fill Rate
                     </span>
                     <span className="text-lg font-bold text-blue-600">
-                      ${results.costSavings.toLocaleString()}
+                      {(results.fill_rate * 100).toFixed(1)}%
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg">
                     <span className="text-sm font-medium text-gray-700">
-                      Risk Reduction
+                      Stockout Rate
                     </span>
                     <span className="text-lg font-bold text-purple-600">
-                      {results.riskReduction}%
+                      {(results.stockout_rate * 100).toFixed(1)}%
                     </span>
                   </div>
                 </div>
 
-                {/* Recommended Stock Levels */}
+                {/* Cost Breakdown */}
                 <div>
                   <h4 className="text-md font-semibold text-gray-900 mb-4">
-                    Recommended Stock Levels
+                    Cost Breakdown
                   </h4>
                   <div className="space-y-3">
-                    {Object.entries(results.recommendedStock).map(
-                      ([component, stock]) => (
-                        <div
-                          key={component}
-                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                        >
-                          <span className="text-sm font-medium text-gray-700">
-                            {component}
-                          </span>
-                          <span className="text-sm font-bold text-gray-900">
-                            {stock} units
-                          </span>
-                        </div>
-                      )
-                    )}
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">
+                        Holding Cost
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        ${results.total_holding_cost.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">
+                        Stockout Cost
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        ${results.total_stockout_cost.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">
+                        Ordering Cost
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        ${results.total_ordering_cost.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

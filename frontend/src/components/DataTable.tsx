@@ -1,23 +1,22 @@
 import React, { useState, useMemo } from "react";
 
-interface DemandRecord {
+interface SalesRecord {
   id: string;
   date: string;
-  store: string;
-  demand: number;
+  sales: number;
 }
 
 interface DataTableProps {
-  records: DemandRecord[];
+  records: SalesRecord[];
   onUpdateRecord: (
     id: string,
-    field: keyof DemandRecord,
+    field: keyof SalesRecord,
     value: string | number
-  ) => void;
-  onDeleteRecord: (id: string) => void;
+  ) => Promise<void>;
+  onDeleteRecord: (id: string) => Promise<void>;
 }
 
-type SortField = keyof DemandRecord;
+type SortField = keyof SalesRecord;
 type SortDirection = "asc" | "desc";
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -30,25 +29,17 @@ const DataTable: React.FC<DataTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState<{
     id: string;
-    field: keyof DemandRecord;
+    field: keyof SalesRecord;
   } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
 
   const itemsPerPage = 10;
 
   // Generate mock data if no records exist
-  const mockRecords: DemandRecord[] = useMemo(() => {
+  const mockRecords: SalesRecord[] = useMemo(() => {
     if (records.length > 0) return records;
 
-    const stores = [
-      "Downtown Store",
-      "Mall Location",
-      "Suburban Branch",
-      "Airport Outlet",
-      "Online Warehouse",
-    ];
-
-    const mockData: DemandRecord[] = [];
+    const mockData: SalesRecord[] = [];
     const today = new Date();
 
     for (let i = 0; i < 50; i++) {
@@ -58,8 +49,7 @@ const DataTable: React.FC<DataTableProps> = ({
       mockData.push({
         id: `mock-${i}`,
         date: date.toISOString().split("T")[0],
-        store: stores[Math.floor(Math.random() * stores.length)],
-        demand: Math.floor(Math.random() * 200) + 10,
+        sales: Math.floor(Math.random() * 200) + 10,
       });
     }
 
@@ -97,8 +87,8 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   const handleCellDoubleClick = (
-    record: DemandRecord,
-    field: keyof DemandRecord
+    record: SalesRecord,
+    field: keyof SalesRecord
   ) => {
     if (field === "id") return; // Don't allow editing ID
     setEditingCell({ id: record.id, field });
@@ -116,12 +106,12 @@ const DataTable: React.FC<DataTableProps> = ({
     }
   };
 
-  const handleCellSave = () => {
+  const handleCellSave = async () => {
     if (editingCell) {
       const value =
-        editingCell.field === "demand" ? parseFloat(editValue) : editValue;
+        editingCell.field === "sales" ? parseFloat(editValue) : editValue;
       if (value !== undefined && !isNaN(value as number)) {
-        onUpdateRecord(editingCell.id, editingCell.field, value);
+        await onUpdateRecord(editingCell.id, editingCell.field, value);
       }
     }
     setEditingCell(null);
@@ -173,17 +163,10 @@ const DataTable: React.FC<DataTableProps> = ({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("store")}
+                onClick={() => handleSort("sales")}
               >
-                Store
-                <SortIcon field="store" />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("demand")}
-              >
-                Demand
-                <SortIcon field="demand" />
+                Sales
+                <SortIcon field="sales" />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
@@ -214,34 +197,10 @@ const DataTable: React.FC<DataTableProps> = ({
                 </td>
                 <td
                   className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 cursor-pointer"
-                  onDoubleClick={() => handleCellDoubleClick(record, "store")}
+                  onDoubleClick={() => handleCellDoubleClick(record, "sales")}
                 >
                   {editingCell?.id === record.id &&
-                  editingCell.field === "store" ? (
-                    <select
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={handleCellEdit}
-                      onBlur={handleCellSave}
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                      autoFocus
-                    >
-                      <option value="Downtown Store">Downtown Store</option>
-                      <option value="Mall Location">Mall Location</option>
-                      <option value="Suburban Branch">Suburban Branch</option>
-                      <option value="Airport Outlet">Airport Outlet</option>
-                      <option value="Online Warehouse">Online Warehouse</option>
-                    </select>
-                  ) : (
-                    record.store
-                  )}
-                </td>
-                <td
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 cursor-pointer"
-                  onDoubleClick={() => handleCellDoubleClick(record, "demand")}
-                >
-                  {editingCell?.id === record.id &&
-                  editingCell.field === "demand" ? (
+                  editingCell?.field === "sales" ? (
                     <input
                       type="number"
                       min="0"
@@ -254,13 +213,13 @@ const DataTable: React.FC<DataTableProps> = ({
                       autoFocus
                     />
                   ) : (
-                    `${record.demand} units`
+                    `${record.sales} units`
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleCellDoubleClick(record, "demand")}
+                      onClick={() => handleCellDoubleClick(record, "sales")}
                       className="text-blue-600 hover:text-blue-800 p-1"
                       title="Edit"
                     >
@@ -279,7 +238,7 @@ const DataTable: React.FC<DataTableProps> = ({
                       </svg>
                     </button>
                     <button
-                      onClick={() => onDeleteRecord(record.id)}
+                      onClick={async () => await onDeleteRecord(record.id)}
                       className="text-red-600 hover:text-red-800 p-1"
                       title="Delete"
                     >

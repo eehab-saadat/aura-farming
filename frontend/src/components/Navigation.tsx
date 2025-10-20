@@ -20,7 +20,7 @@ const Navigation: React.FC = () => {
 
   return (
     <div className="flex-1 p-4 space-y-2">
-      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2">
+      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-2">
         Navigation
       </div>
 
@@ -32,15 +32,15 @@ const Navigation: React.FC = () => {
             to={item.route}
             className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
               location.pathname === item.route
-                ? "bg-primary/20 border border-primary/30 text-primary"
-                : "hover:bg-gray-700/50 text-gray-300 hover:text-white"
+                ? "bg-primary/10 border border-primary/20 text-primary shadow-sm"
+                : "hover:bg-gray-100 text-gray-700 hover:text-primary"
             }`}
           >
             <div
               className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${
                 location.pathname === item.route
-                  ? "bg-primary text-white"
-                  : "bg-gray-600 text-gray-300"
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-gray-200 text-gray-600"
               }`}
             >
               {item.icon}
