@@ -5,10 +5,18 @@ from modules.demand_predictor import get_demand_forecast
 from modules.optimizer import run_optimization
 import pandas as pd
 import sys
+import google.generativeai as genai
 sys.path.append('modules')
 
 app = Flask(__name__)
 CORS(app)
+
+# Configure Gemini API
+api_key = environ.get('GEMINI_API_KEY')
+if not api_key:
+    print("Warning: GEMINI_API_KEY environment variable not set. Gemini features will not work.")
+else:
+    genai.configure(api_key=api_key)
 
 CSV_PATH = "data/daily_sales.csv"
 
@@ -189,6 +197,18 @@ def optimize_inventory():
             n_jobs=4
         )
 
+        # Build human-readable explanation from results
+        opt = optimization_results.get('optimal_policy', {})
+        perf = optimization_results.get('performance_metrics', {})
+        R = int(round(opt.get('reorder_point', 0)))
+        Q = int(round(opt.get('order_quantity', 0)))
+        fill_rate_pct = float(perf.get('fill_rate', 0.0)) * 100.0
+        explanation = (
+            f"The simulation shows that you should keep the inventory level at approximately {R} units. "
+            f"This can be achieved if you reorder production of {Q} units whenever the inventory of the component lowers to the {R} units threshold. "
+            f"This way you can achieve a fill rate of {fill_rate_pct:.1f} percent."
+        )
+
         # Step 3: Prepare comprehensive response
         response = {
             "success": True,
@@ -198,6 +218,7 @@ def optimize_inventory():
             "performance_metrics": optimization_results['performance_metrics'],
             "monte_carlo_stats": optimization_results['monte_carlo_stats'],
             "daily_simulation": optimization_results['daily_simulation'],
+            "explanation": explanation,
             "message": f"Optimization completed successfully. Optimal policy: R={optimization_results['optimal_policy']['reorder_point']:.0f}, Q={optimization_results['optimal_policy']['order_quantity']:.0f}"
         }
 

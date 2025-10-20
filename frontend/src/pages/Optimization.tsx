@@ -23,12 +23,26 @@ const Optimization: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [results, setResults] = useState<OptimizationResult | null>(null);
   const [costConfig, setCostConfig] = useState<CostConfiguration | null>(null);
+  const [explanation, setExplanation] = useState<string>("");
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Load cost configuration on component mount
   useEffect(() => {
     const config = getCostConfiguration();
     setCostConfig(config);
   }, []);
+
+  const speakExplanation = () => {
+    if (isSpeaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      const utterance = new SpeechSynthesisUtterance(explanation);
+      utterance.onend = () => setIsSpeaking(false);
+      speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+    }
+  };
 
   const optimizationSteps = [
     "Loading forecast data...",
@@ -110,6 +124,9 @@ const Optimization: React.FC = () => {
         total_ordering_cost: Math.round(costSummary.ordering_cost || 0),
         message: apiResult.message || "Optimization completed successfully",
       });
+
+      // Set the explanation from the API response
+      setExplanation(apiResult.explanation || "No explanation available.");
     } catch (error) {
       console.error("Optimization failed:", error);
       alert(
@@ -310,6 +327,67 @@ const Optimization: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Audio Explanation Section */}
+        {results && !isOptimizing && (
+          <div className="mt-8 flex justify-center">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Audio Explanation
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Get a detailed explanation of the optimization results
+              </p>
+              <button
+                onClick={speakExplanation}
+                disabled={!explanation}
+                className={`px-6 py-3 font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl ${
+                  !explanation
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : isSpeaking
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : "bg-green-600 text-white hover:bg-green-700"
+                }`}
+              >
+                {isSpeaking ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-pulse">
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <span>Stop Audio</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                      />
+                    </svg>
+                    <span>Explain in Audio</span>
+                  </div>
+                )}
+              </button>
             </div>
           </div>
         )}
