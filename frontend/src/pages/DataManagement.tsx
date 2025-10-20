@@ -2,14 +2,14 @@ import React, { useState, useRef, useMemo, useEffect } from "react";
 import QuickAddForm from "../components/QuickAddForm";
 import DataTable from "../components/DataTable";
 
-interface DemandRecord {
+interface SalesRecord {
   id: string;
   date: string;
-  demand: number;
+  sales: number;
 }
 
 const DataManagement: React.FC = () => {
-  const [records, setRecords] = useState<DemandRecord[]>([]);
+  const [records, setRecords] = useState<SalesRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
   const tableRef = useRef<HTMLDivElement>(null);
@@ -20,11 +20,11 @@ const DataManagement: React.FC = () => {
       try {
         const response = await fetch("http://127.0.0.1:5000/data");
         const data = await response.json();
-        const mappedData: DemandRecord[] = data.map(
+        const mappedData: SalesRecord[] = data.map(
           (item: any, index: number) => ({
             id: index.toString(),
             date: item.date,
-            demand: item.sales,
+            sales: item.sales,
           })
         );
         setRecords(mappedData);
@@ -77,13 +77,13 @@ const DataManagement: React.FC = () => {
     });
   }, [records, searchTerm, dateRangeFilter]);
 
-  const handleRecordAdded = async (record: DemandRecord) => {
+  const handleRecordAdded = async (record: SalesRecord) => {
     try {
       // Map to API format
       const apiRecord = {
         date: record.date,
         store: 1, // assume single store
-        sales: record.demand,
+        sales: record.sales,
         dow: 1, // default
         week: 1,
         month: 1,
@@ -101,11 +101,11 @@ const DataManagement: React.FC = () => {
         // Refetch data
         const fetchResponse = await fetch("http://127.0.0.1:5000/data");
         const data = await fetchResponse.json();
-        const mappedData: DemandRecord[] = data.map(
+        const mappedData: SalesRecord[] = data.map(
           (item: any, index: number) => ({
             id: index.toString(),
             date: item.date,
-            demand: item.sales,
+            sales: item.sales,
           })
         );
         setRecords(mappedData);
@@ -125,13 +125,13 @@ const DataManagement: React.FC = () => {
 
   const handleUpdateRecord = async (
     id: string,
-    field: keyof DemandRecord,
+    field: keyof SalesRecord,
     value: string | number
   ) => {
     try {
       const index = parseInt(id);
       const updateData: any = {};
-      if (field === "demand") {
+      if (field === "sales") {
         updateData.sales = value;
       } else if (field === "date") {
         updateData.date = value;
@@ -165,12 +165,11 @@ const DataManagement: React.FC = () => {
           // Refetch data to update indices
           const fetchResponse = await fetch("http://127.0.0.1:5000/data");
           const data = await fetchResponse.json();
-          const mappedData: DemandRecord[] = data.map(
+          const mappedData: SalesRecord[] = data.map(
             (item: any, index: number) => ({
               id: index.toString(),
               date: item.date,
-              store: item.store,
-              demand: item.sales,
+              sales: item.sales,
             })
           );
           setRecords(mappedData);
@@ -194,7 +193,6 @@ const DataManagement: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           Data Management
         </h1>
-        <p className="text-gray-600">Import, export, and manage farming data</p>
       </div>
 
       {/* Quick Add Form */}
@@ -222,7 +220,7 @@ const DataManagement: React.FC = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search by store or date..."
+                placeholder="Search by date..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary"

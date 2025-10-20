@@ -1,22 +1,22 @@
 import React, { useState, useMemo } from "react";
 
-interface DemandRecord {
+interface SalesRecord {
   id: string;
   date: string;
-  demand: number;
+  sales: number;
 }
 
 interface DataTableProps {
-  records: DemandRecord[];
+  records: SalesRecord[];
   onUpdateRecord: (
     id: string,
-    field: keyof DemandRecord,
+    field: keyof SalesRecord,
     value: string | number
   ) => Promise<void>;
   onDeleteRecord: (id: string) => Promise<void>;
 }
 
-type SortField = keyof DemandRecord;
+type SortField = keyof SalesRecord;
 type SortDirection = "asc" | "desc";
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -29,17 +29,17 @@ const DataTable: React.FC<DataTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState<{
     id: string;
-    field: keyof DemandRecord;
+    field: keyof SalesRecord;
   } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
 
   const itemsPerPage = 10;
 
   // Generate mock data if no records exist
-  const mockRecords: DemandRecord[] = useMemo(() => {
+  const mockRecords: SalesRecord[] = useMemo(() => {
     if (records.length > 0) return records;
 
-    const mockData: DemandRecord[] = [];
+    const mockData: SalesRecord[] = [];
     const today = new Date();
 
     for (let i = 0; i < 50; i++) {
@@ -49,7 +49,7 @@ const DataTable: React.FC<DataTableProps> = ({
       mockData.push({
         id: `mock-${i}`,
         date: date.toISOString().split("T")[0],
-        demand: Math.floor(Math.random() * 200) + 10,
+        sales: Math.floor(Math.random() * 200) + 10,
       });
     }
 
@@ -87,8 +87,8 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   const handleCellDoubleClick = (
-    record: DemandRecord,
-    field: keyof DemandRecord
+    record: SalesRecord,
+    field: keyof SalesRecord
   ) => {
     if (field === "id") return; // Don't allow editing ID
     setEditingCell({ id: record.id, field });
@@ -109,7 +109,7 @@ const DataTable: React.FC<DataTableProps> = ({
   const handleCellSave = async () => {
     if (editingCell) {
       const value =
-        editingCell.field === "demand" ? parseFloat(editValue) : editValue;
+        editingCell.field === "sales" ? parseFloat(editValue) : editValue;
       if (value !== undefined && !isNaN(value as number)) {
         await onUpdateRecord(editingCell.id, editingCell.field, value);
       }
@@ -163,10 +163,10 @@ const DataTable: React.FC<DataTableProps> = ({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort("demand")}
+                onClick={() => handleSort("sales")}
               >
-                Demand
-                <SortIcon field="demand" />
+                Sales
+                <SortIcon field="sales" />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
@@ -197,10 +197,10 @@ const DataTable: React.FC<DataTableProps> = ({
                 </td>
                 <td
                   className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 cursor-pointer"
-                  onDoubleClick={() => handleCellDoubleClick(record, "demand")}
+                  onDoubleClick={() => handleCellDoubleClick(record, "sales")}
                 >
                   {editingCell?.id === record.id &&
-                  editingCell.field === "demand" ? (
+                  editingCell?.field === "sales" ? (
                     <input
                       type="number"
                       min="0"
@@ -213,13 +213,13 @@ const DataTable: React.FC<DataTableProps> = ({
                       autoFocus
                     />
                   ) : (
-                    `${record.demand} units`
+                    `${record.sales} units`
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleCellDoubleClick(record, "demand")}
+                      onClick={() => handleCellDoubleClick(record, "sales")}
                       className="text-blue-600 hover:text-blue-800 p-1"
                       title="Edit"
                     >
