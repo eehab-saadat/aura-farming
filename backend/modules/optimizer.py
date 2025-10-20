@@ -194,17 +194,142 @@ def grid_search_RQ(mu, sigma, R_grid, Q_grid, L, h, p, K, I0, n_sims=200, n_jobs
     return df, best
 
 
+def run_optimization(df_pred, h=5.0, p=20.0, K=200.0, L=1, n_sims=200, n_jobs=4):
+    """
+    Run complete optimization pipeline on forecast data.
+    
+    Parameters:
+        df_pred: DataFrame with columns ['date', 'store', 'sales'] or ['date', 'demand']
+        h: holding cost per unit per day
+        p: stockout penalty per lost sale
+        K: fixed ordering cost
+        L: lead time in days
+        n_sims: number of Monte Carlo simulations
+        n_jobs: parallel processing jobs
+    
+    Returns:
+        dict with optimal policy, results, and analytics
+    """
+    # Check if data has stores or is aggregated
+    if 'store' in df_pred.columns and 'sales' in df_pred.columns:
+        # Multi-store data: calculate mu and sigma across stores
+        pivot = df_pred.pivot_table(index="date", columns="store", values="sales")
+        pivot = pivot.sort_index()
+        mu = pivot.mean(axis=1).values.astype(float)
+        sigma = pivot.std(axis=1).fillna(1.0).values.astype(float)
+        sigma = np.maximum(sigma, 1.0)  # Floor at 1.0
+    elif 'demand' in df_pred.columns:
+        # Aggregated forecast data: use demand directly, estimate sigma as % of mu
+        df_sorted = df_pred.sort_values('date').reset_index(drop=True)
+        mu = df_sorted['demand'].values.astype(float)
+        # Estimate sigma as 10% of demand (can be adjusted)
+        sigma = np.maximum(mu * 0.1, 1.0)
+    else:
+        raise ValueError("DataFrame must have either ['date', 'store', 'sales'] or ['date', 'demand'] columns")
+    
+    T = len(mu)
+    mean_demand = mu.mean()
+    
+    # Define search space
+    R_min = int(mean_demand * 0.3)
+    R_max = int(mean_demand * 2.0)
+    R_step = max(int((R_max - R_min) / 15), 50)
+    R_grid = list(range(R_min, R_max + 1, R_step))
+    
+    Q_min = int(mean_demand * 0.5)
+    Q_max = int(mean_demand * 5.0)
+    Q_step = max(int((Q_max - Q_min) / 15), 50)
+    Q_grid = list(range(Q_min, Q_max + 1, Q_step))
+    
+    I0 = mean_demand * 0.5
+    
+    # Run grid search
+    results_df, best = grid_search_RQ(
+        mu=mu,
+        sigma=sigma,
+        R_grid=R_grid,
+        Q_grid=Q_grid,
+        L=L,
+        h=h,
+        p=p,
+        K=K,
+        I0=I0,
+        n_sims=n_sims,
+        n_jobs=n_jobs
+    )
+    
+    # Run detailed deterministic simulation
+    cost_det, metrics_det, daily_data = simulate_one_path(
+        demand=mu,
+        R=best['R'],
+        Q=best['Q'],
+        L=L,
+        h=h,
+        p=p,
+        K=K,
+        I0=I0,
+        track_daily=True
+    )
+    
+    daily_df = pd.DataFrame(daily_data)
+    
+    # Get detailed analysis
+    analysis = analyze_inventory_policy(
+        results_df=daily_df,
+        policy={'R': best['R'], 'Q': best['Q']},
+        demand_series=mu,
+        h=h,
+        p=p,
+        K=K
+    )
+    
+    return {
+        'optimal_policy': {
+            'reorder_point': float(best['R']),
+            'order_quantity': float(best['Q']),
+            'lead_time': L,
+            'holding_cost': h,
+            'stockout_penalty': p,
+            'ordering_cost': K,
+            'initial_inventory': float(I0)
+        },
+        'cost_summary': {
+            'total_cost': float(analysis['total_cost']),
+            'holding_cost': float(analysis['total_holding_cost']),
+            'stockout_cost': float(analysis['total_stockout_cost']),
+            'ordering_cost': float(analysis['total_ordering_cost']),
+            'holding_pct': float(analysis['total_holding_cost']/analysis['total_cost']*100) if analysis['total_cost'] > 0 else 0,
+            'stockout_pct': float(analysis['total_stockout_cost']/analysis['total_cost']*100) if analysis['total_cost'] > 0 else 0,
+            'ordering_pct': float(analysis['total_ordering_cost']/analysis['total_cost']*100) if analysis['total_cost'] > 0 else 0
+        },
+        'performance_metrics': {
+            'fill_rate': float(analysis['fill_rate']),
+            'stockout_rate': float(analysis['stockout_rate']),
+            'total_lost_sales': float(analysis['total_lost_sales']),
+            'days_with_stockouts': int(analysis['days_with_stockouts']),
+            'total_days': T,
+            'mean_inventory': float(analysis['mean_inventory']),
+            'num_orders': int(analysis['num_orders'])
+        },
+        'monte_carlo_stats': {
+            'mean_cost': float(best['mean_cost']),
+            'std_cost': float(best['std_cost']),
+            'p5_cost': float(best['p5_cost']),
+            'p95_cost': float(best['p95_cost']),
+            'mean_fill_rate': float(best['mean_fill_rate']),
+            'mean_orders': float(best['mean_orders'])
+        },
+        'daily_simulation': daily_df.to_dict(orient='records'),
+        'all_policies': results_df.to_dict(orient='records')
+    }
+
+
 if __name__ == "__main__":
     # sample usage for testing with analytics
     # Load predicted data
     csv_path = "d:/projects/aura-farming/backend/modules/predictions.csv"
     print(f"Loading predicted data from {csv_path}")
     df_pred = pd.read_csv(csv_path, parse_dates=["date"])
-    
-    # Aggregate demand by date (sum across all stores)
-    demand_by_date = df_pred.groupby("date")["sales"].sum().sort_index()
-    
-    # Calculate mu and sigma per day (using stores as samples)
     pivot = df_pred.pivot_table(index="date", columns="store", values="sales")
     pivot = pivot.sort_index()
     
